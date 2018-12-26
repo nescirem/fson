@@ -152,9 +152,29 @@ contains
             case ("n")
                 value % value_type = TYPE_NULL
                 call parse_for_chars(unit, str, "ull")
-            case("-", "0": "9")
+            case ("-", "0": "9")
                 call push_char(c)
                 call parse_number(unit, str, value)
+            case ("/")
+                c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                if (c=="*") then
+                    do 
+                        c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                        if ( c=="*" ) then
+                            c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                            if (c =="/") then
+                                call parse_value(unit= unit, str=str , value=value)
+                                exit
+                            !else
+                                !print *, "ERROR: Expected '/' but EOF found"
+                                !call exit (1)
+                            endif
+                        endif
+                    enddo
+                elseif (c=="/") then
+                    print *, "ERROR: Unsupported comment '// '."
+                    call exit (1)
+                endif
             case default
                 print *, "ERROR: Unexpected character while parsing value. '", c, "' ASCII=", iachar(c)
                 call exit (1)
@@ -177,6 +197,27 @@ contains
 
         ! pair name
         c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+        if (c=="/") then
+            c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+            if (c=="*") then
+                do
+                    c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                    if (c=="*") then
+                        c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                        if (c =="/") then
+                            c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                            exit
+                        !else
+                            !print *, "ERROR: Expected '/' but EOF found"
+                            !call exit (1)
+                        endif
+                    endif
+                enddo
+            elseif (c=="/") then
+                print *, "ERROR: Unsupported comment '// '."
+                call exit (1)
+            endif
+        endif
         if (eof) then
             print *, "ERROR: Unexpected end of file while parsing start of object."
             call exit (1)
@@ -207,12 +248,32 @@ contains
 
         ! another possible pair
         c = pop_char(unit, str, eof = eof, skip_ws = .true.)
-        if (eof) then
+        if (c=="/") then
+            c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+            if (c=="*") then
+                do
+                    c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                    if (c=="*") then
+                        c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                        if (c =="/") then
+                            c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                            exit
+                        !else
+                            !print *, "ERROR: Expected '/' but EOF found"
+                            !call exit (1)
+                        endif
+                    endif
+                enddo
+            elseif (c=="/") then
+                print *, "ERROR: Unsupported comment '// '."
+                call exit (1)
+            endif
+        elseif (eof) then
             return
-        else if ("," == c) then
+        elseif ("," == c) then
             ! read the next member            
             call parse_object(unit = unit, str=str, parent = parent)
-        else if ("}" == c) then
+        elseif ("}" == c) then
             return
         else
             print *, "ERROR: Expecting end of object.", c
@@ -249,6 +310,24 @@ contains
          ! pop the next character
          c = pop_char(unit, str, eof = eof, skip_ws = .true.)
 
+         if (c=="/") then
+             c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+             if (c=="*") then
+                 do
+                     c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                     if (c=="*") then
+                         c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                         if (c =="/") then
+                             c = pop_char(unit, str, eof = eof, skip_ws = .true.)
+                             exit
+                         endif
+                     endif
+                 enddo
+             elseif (c=="/") then
+                 print *, "ERROR: Unsupported comment '// '."
+                 call exit (1)
+             endif
+         endif
          if (eof) then
             finished = .true.
          else if ("]" == c) then
